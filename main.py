@@ -2,44 +2,62 @@ from modsim import *
 import matplotlib
 import matplotlib.animation as animation
 import pdb
+import platform
 
 # Calculations
 
-def slope_func(state, t, system):
-#     x_r, y_r, vx_r, vy_r, x_p, y_p, vx_p, vy_p = state
-	x_r, y_r, vx_r, vy_r = state
+def planet_slope_func(planet, t, system):
+	x, y, vx, vy = planet
+	unpack(system)
+
+	return vx, vy, 0, 0
+	
+
+def rocket_slope_func(rocket, t, system):
+#     x_r, y_r, vx_r, vy_r, x_p, y_p, vx_p, vy_p = rocket
+	x, y, vx, vy = rocket
 	unpack(system)
 	
-	pos = Vector(x_r, y_r)
-	
+	pos = Vector(x, y)
+
 	if pos.mag > rp:
 		acc = - (G * mp / (pos.mag**2)).m * pos.hat()
 	else:
 		# hit planet surface
-		vx_r = 0
-		vy_r = 0
+		vx = 0
+		vy = 0
 		acc = Vector(0,0)
 
-	return vx_r, vy_r, acc.x, acc.y
+	return vx, vy, acc.x, acc.y
 
-init = State(
-	x_r=-1e10, 
-	y_r=300e6, 
-	vx_r = 17e3,
-	vy_r = 0)
+rocket = State(
+	x=-1e10, 
+	y=300e6, 
+	vx = 17e3,
+	vy = 0)
+
+planet = State(
+	x=0,
+	y=0,
+	vx=47e3,
+	vy=0)
 
 duration = 11e5
 
 system = System(
-	init=init, 
+	init=planet,
 	G=6.67408e-11, 
 	ts=linspace(0,duration,1000),
 	mr = 721.9,
 	mp = 1.9e27,
 	rp = 70e6)
 
-run_odeint(system, slope_func)
-results = system.results
+run_odeint(system, planet_slope_func)
+results_p = system.results
+
+system.init = rocket
+run_odeint(system, rocket_slope_func)
+results_r = system.results
 
 
 ##########
@@ -47,17 +65,30 @@ results = system.results
 ##########
 
 # Position
-# --------
+# ========
 
-x_r = results.x_r
-y_r = results.y_r
+# Planet
+# ------
+
+x_p = results_p.x
+y_p = results_p.y
+
+plot(x_p, y_p)
+savefig('build/jupiter.png')
+
+
+# Rocket
+# ------
+
+x_r = results_r.x
+y_r = results_r.y
 
 # pdb.set_trace()
 
 # Setup figure
-fig1 = plt.figure()
-fig1.set_dpi(100)
-fig1.set_size_inches(9,9)
+fig_pos = plt.figure()
+fig_pos.set_dpi(100)
+fig_pos.set_size_inches(9,9)
 plt.title('Gravity Slingshot (position)')
 
 # Plot Jupiter 
@@ -65,25 +96,37 @@ ax = plt.axes(xlim=(-5e9,5e9), ylim=(-5e9,5e9))
 ax.add_artist(plt.Circle((0,0), system.rp))
 
 # Animation
-def rocket_to_circles(t, x_r, y_r, ax):
-	x = interpolate(x_r)(t)
-	y = interpolate(y_r)(t)
-	ax.add_artist(plt.Circle((x,y), system.rp, color='r'))
+def generate_circle(t, x_r, y_r, x_p, y_p, ax):
+	def _generate(t, x, y, ax, color):
+		x = interpolate(x)(t)
+		y = interpolate(y)(t)
+		ax.add_artist(plt.Circle((x,y), system.rp, color=color))
+
+	_generate(t, x_r, y_r, ax, 'red')
+	_generate(t, x_p, y_p, ax, 'green')
+
 	return []
 
 frames = linspace(0,duration, 50)
-ani = animation.FuncAnimation(fig1, rocket_to_circles, frames, 
-							  fargs=(x_r, y_r, ax), interval=50, blit=True)
+ani = animation.FuncAnimation(fig_pos, generate_circle, frames, 
+							  fargs=(x_r, y_r, x_p, y_p, ax), interval=200, blit=True)
 
-ani.save('build/slingshot.mp4', writer='ffmpeg')
+# Save animation
+if (platform.system() == "Darwin"):
+	ani.save('build/slingshot.gif', writer='imagemagick')
+else:
+	ani.save('build/slingshot.mp4', writer='ffmpeg')
+
+fig_pos.savefig('build/position.png')
+
 
 # Velocity
 # --------
  
 fig_v = plt.figure()
 
-vx_r = results.vx_r
-vy_r = results.vy_r
+vx_r = results_r.vx
+vy_r = results_r.vy
 v_r = np.sqrt(vx_r**2 + vy_r**2)
 
 plt.plot(v_r)
