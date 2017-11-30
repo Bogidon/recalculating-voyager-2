@@ -59,7 +59,7 @@ frames = linspace(0,duration, 50)
 ani = animation.FuncAnimation(fig1, rocket_to_circles, frames, 
 							  fargs=(x_r, y_r, ax), interval=50, blit=True)
 
-ani.save('build/slingshot.gif', writer='imagemagick')
+ani.save('build/slingshot.mp4', writer='ffmpeg')
 plt.show()
 
 vx_r = results.vx_r
