@@ -1,8 +1,9 @@
 from modsim import *
 import matplotlib
 import matplotlib.animation as animation
-import pdb
 import platform
+import sys
+from pdb import set_trace
 
 # Calculations
 
@@ -18,29 +19,34 @@ def rocket_slope_func(rocket, t, system):
 	x, y, vx, vy = rocket
 	unpack(system)
 	
-	pos = Vector(x, y)
+	x_p = interpolate(results_p.x)(t)
+	y_p = interpolate(results_p.y)(t)
 
-	if pos.mag > rp:
-		acc = - (G * mp / (pos.mag**2)).m * pos.hat()
+	pos = Vector(x, y)
+	pos_p = Vector(x_p, y_p)
+	distance = pos.dist(pos_p).m
+
+	if distance > rp:
+		acc = - (G * mp / (distance**2)) * (pos-pos_p).hat()
 	else:
 		# hit planet surface
 		vx = 0
 		vy = 0
 		acc = Vector(0,0)
 
-	return vx, vy, acc.x, acc.y
-
-rocket = State(
-	x=-1e10, 
-	y=300e6, 
-	vx = 17e3,
-	vy = 0)
+	return vx, vy, acc.x.m, acc.y.m
 
 planet = State(
-	x=0,
+	x=-1e10,
 	y=0,
 	vx=47e3,
 	vy=0)
+
+rocket = State(
+	x=-0.8e10, 
+	y=-1000e6, 
+	vx = 12e3,
+	vy = 12e3)
 
 duration = 11e5
 
@@ -56,6 +62,7 @@ run_odeint(system, planet_slope_func)
 results_p = system.results
 
 system.init = rocket
+system.results_p = results_p
 run_odeint(system, rocket_slope_func)
 results_r = system.results
 
@@ -64,58 +71,86 @@ results_r = system.results
 # Graphing
 ##########
 
+mode = 'update'
+if ('trail' in sys.argv):
+	mode = 'trail'
+if ('update' in sys.argv):
+	mode = 'update'
+
 # Position
 # ========
 
-# Planet
-# ------
-
 x_p = results_p.x
 y_p = results_p.y
-
-plot(x_p, y_p)
-savefig('build/jupiter.png')
-
-
-# Rocket
-# ------
-
 x_r = results_r.x
 y_r = results_r.y
-
-# pdb.set_trace()
 
 # Setup figure
 fig_pos = plt.figure()
 fig_pos.set_dpi(100)
 fig_pos.set_size_inches(9,9)
 plt.title('Gravity Slingshot (position)')
+ax = plt.axes(xlim=(-1.2e10,1e10), ylim=(-5e9,5e9))
 
-# Plot Jupiter 
-ax = plt.axes(xlim=(-5e9,5e9), ylim=(-5e9,5e9))
-ax.add_artist(plt.Circle((0,0), system.rp))
+# Setup modes
+if (mode == 'update'):
+	rocket = plt.Circle((x_r[0],y_r[0]), system.rp, color='red')
+	planet = plt.Circle((x_p[0],y_p[0]), system.rp, color='green')
+	line_r, = plt.plot([], [], 'red')
+	line_p, = plt.plot([], [], 'green')
+
+	ax.add_artist(rocket)
+	ax.add_artist(planet)
 
 # Animation
-def generate_circle(t, x_r, y_r, x_p, y_p, ax):
-	def _generate(t, x, y, ax, color):
-		x = interpolate(x)(t)
-		y = interpolate(y)(t)
-		ax.add_artist(plt.Circle((x,y), system.rp, color=color))
+def generate_circle(t, x_r, y_r, x_p, y_p, ax, rocket, planet, line_r, line_p):
+	if (mode == 'update'):
+		def _generate(t, x_series, y_series, ax, circle, line):
+			x = interpolate(x_series)(t)
+			y = interpolate(y_series)(t)
+			circle.center = (x, y)
 
-	_generate(t, x_r, y_r, ax, 'red')
-	_generate(t, x_p, y_p, ax, 'green')
+			line_x = np.append(line.get_xdata(), x)
+			line_y = np.append(line.get_ydata(), y)
+			line.set_data(line_x, line_y)
 
-	return []
+		_generate(t, x_r, y_r, ax, rocket, line_r)
+		_generate(t, x_p, y_p, ax, planet, line_p)
 
-frames = linspace(0,duration, 50)
-ani = animation.FuncAnimation(fig_pos, generate_circle, frames, 
-							  fargs=(x_r, y_r, x_p, y_p, ax), interval=200, blit=True)
+		return [rocket, planet]
+
+	if (mode == 'trail'):
+		def _generate(t, x, y, ax, color):
+			x = interpolate(x)(t)
+			y = interpolate(y)(t)
+			ax.add_artist(plt.Circle((x,y), system.rp, color=color))
+
+		_generate(t, x_r, y_r, ax, 'red')
+		_generate(t, x_p, y_p, ax, 'green')
+
+		return []
+
+num_frames = 200 if (mode == 'update') else 50
+frames = linspace(0,duration, num_frames)
+generate_cirlce_fargs = (
+	x_r,
+	y_r,
+	x_p,
+	y_p,
+	ax,
+	rocket,
+	planet,
+	line_r,
+	line_p
+)
+
+ani = animation.FuncAnimation(fig_pos, generate_circle, frames, fargs=generate_cirlce_fargs, interval=200, blit=True)
 
 # Save animation
 if (platform.system() == "Darwin"):
-	ani.save('build/slingshot.gif', writer='imagemagick')
+	ani.save(f'build/slingshot_{mode}.gif', writer='imagemagick')
 else:
-	ani.save('build/slingshot.mp4', writer='ffmpeg')
+	ani.save(f'build/slingshot_{mode}.mp4', writer='ffmpeg')
 
 fig_pos.savefig('build/position.png')
 
