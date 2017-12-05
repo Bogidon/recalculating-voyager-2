@@ -51,7 +51,7 @@ def rocket_slope_func(rocket, t, system):
 		return vx, vy, acc.x.m, acc.y.m
 
 	else:
-		if distance2 > rp:
+		if distance2 > rp2:
 			acc = - (G * mp / (distance2**2)) * (pos-pos_p2).hat()
 		else:
 			# hit planet surface
@@ -211,6 +211,7 @@ def generate_circle(t, x_r, y_r, x_p, y_p, x_p2, y_p2, ax, rocket, planet, plane
 
 		_generate(t, x_r, y_r, ax, 'red')
 		_generate(t, x_p, y_p, ax, 'green')
+		_generate(t, x_p2, y_p2, ax, 'blue')
 
 		return []
 
