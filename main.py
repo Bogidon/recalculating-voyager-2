@@ -122,8 +122,8 @@ if ('update' in sys.argv):
 # Position
 # ========
 
-radius_mult = 1e3
-colors = ['red', 'green', 'blue', 'yellow', 'orange', 'purple']
+radius_mult = 1e5
+colors = ['#009bdf','#e31d3c','#f47920','#ffc20e','#c0d028','#8ebe3f','#349e49','#26aaa5','#6bc1d3','#7b5aa6','#ed037c','#750324','#00677e']
 
 # Setup figure
 fig_pos = plt.figure()
@@ -144,7 +144,11 @@ if (mode == 'update'):
 		ax.add_artist(circle)
 		ax.add_artist(line)
 
+		body['color'] = color
 		body['artists'] = (circle, line)
+if (mode == 'trail'):
+	for idx, body in enumerate(bodies):
+		body['color'] = colors[idx]
 
 # Animation
 def animate(t, bodies, ax):
@@ -171,13 +175,14 @@ def animate(t, bodies, ax):
 		return [body['artists'][1] for body in bodies]
 
 	if (mode == 'trail'):
-		def _generate(t, x, y, ax, color):
+		def _generate(t, x, y, radius, ax, color):
 			x = interpolate(x)(t)
 			y = interpolate(y)(t)
-			ax.add_artist(plt.Circle((x,y), system.rp, color=color))
+			ax.add_artist(plt.Circle((x,y), radius, color=color))
 
-		_generate(t, x_r, y_r, ax, 'red')
-		_generate(t, x_p, y_p, ax, 'green')
+		for body in bodies:
+			positions = body['positions']
+			_generate(t, positions.x, positions.y, 1e11, ax, body['color'])
 
 		return []
 
@@ -187,11 +192,11 @@ ani = animation.FuncAnimation(fig_pos, animate, frames, fargs=(bodies, ax), inte
 
 # Save animation
 if (platform.system() == "Darwin"):
-	ani.save(f'build/3slingshot_{mode}.gif', writer='imagemagick')
+	ani.save(f'build/slingshot_{mode}.gif', writer='imagemagick')
 else:
-	ani.save(f'build/3slingshot_{mode}.mp4', writer='ffmpeg')
+	ani.save(f'build/slingshot_{mode}.mp4', writer='ffmpeg')
 
-fig_pos.savefig('build/3position.png')
+fig_pos.savefig('build/position.png')
 
 
 # Velocity
@@ -200,12 +205,10 @@ fig_pos.savefig('build/3position.png')
 fig_v = plt.figure()
 plt.title('Speed')
 
-for idx, body in enumerate(bodies):
-	color = colors[idx]
-	
+for body in bodies:
 	vx = body['positions'].vx
 	vy = body['positions'].vy
 	speed = np.sqrt(vx**2 + vy**2)
-	plt.plot(speed, color=color)
+	plt.plot(speed, color=body['color'])
 
 fig_v.savefig('build/speed.png')
