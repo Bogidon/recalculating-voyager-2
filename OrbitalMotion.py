@@ -91,10 +91,10 @@ planet = State(
 	vy=0)
 
 rocket = State(
-	x=-1.475e11, 
+	x=-4.44e12, 
 	y=0, 
 	vx = 0,
-	vy = -30.3e3)
+	vy = -3756)
 
 '''planet2 = State(
 	x=-1e10,
@@ -103,13 +103,13 @@ rocket = State(
 	vy=0)'''
 
 
-duration = 11e7
+duration = 11e9
 
 system = System(
 	init=planet,
 	G=6.67408e-11, 
 	ts=linspace(0,duration,1000),
-	mr = 5.972e24,
+	mr = 1.309e22,
 	mp = 1.989e30,
 	#mp2 = 1.9e27,
 	rp = 695700e3)
@@ -164,12 +164,12 @@ fig_pos = plt.figure()
 fig_pos.set_dpi(100)
 fig_pos.set_size_inches(9,9)
 plt.title('Gravity Slingshot (position)')
-ax = plt.axes(xlim=(-2e11,2e11), ylim=(-2e11,2e11))
+ax = plt.axes(xlim=(-5e12,5e12), ylim=(-5e12,5e12))
 
 # Setup modes
 if (mode == 'update'):
-	rocket = plt.Circle((x_r[0],y_r[0]), system.rp * 5, color='red')
-	planet = plt.Circle((x_p[0],y_p[0]), system.rp * 5, color='green')
+	rocket = plt.Circle((x_r[0],y_r[0]), system.rp * 100, color='red')
+	planet = plt.Circle((x_p[0],y_p[0]), system.rp * 100, color='green')
 	#planet2 = plt.Circle((x_p2[0],y_p2[0]), system.rp2, color='blue')
 	line_r, = plt.plot([], [], 'red')
 	line_p, = plt.plot([], [], 'green')
