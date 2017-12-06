@@ -1,142 +1,112 @@
 from modsim import *
 import matplotlib
 import matplotlib.animation as animation
-#import matplotlib.collections.LineCollection as LineCollection
 import platform
 import sys
 from pdb import set_trace
 
+##############
 # Calculations
+##############
 
-def planet_slope_func(planet, t, system):
-	x, y, vx, vy = planet
+def linear_slope_func(sun, t, system):
+	x, y, vx, vy = sun
 	unpack(system)
 
 	return vx, vy, 0, 0
 	
-def planet2_slope_func(planet2, t, system):
-	x, y, vx, vy = planet2
-	unpack(system)
+def projectile_slope_func(projectile, t, system):
+	"""
+	System, must contain an other_bodies property, which is
+	an array of dictionaries containing information about each 
+	body, with the following structure:
 
-	return vx, vy, 0, 0
+	Body: {
+		mass: num
+		radius: num
+		positions: TimeFrame
+			x: TimeSeries
+			y: TimeSeries
+	}
+	"""
+
+	x, y, vx, vy = projectile
+	other_bodies = system.other_bodies
+	G = system.G
 	
-
-def rocket_slope_func(rocket, t, system):
-#     x_r, y_r, vx_r, vy_r, x_p, y_p, vx_p, vy_p = rocket
-	x, y, vx, vy = rocket
-	unpack(system)
-	
-	x_p = interpolate(results_p.x)(t)
-	y_p = interpolate(results_p.y)(t)
-
-	x_p2 = interpolate(results_p2.x)(t)
-	y_p2 = interpolate(results_p2.y)(t)
-
 	pos = Vector(x, y)
-	pos_p = Vector(x_p, y_p)
-	pos_p2 = Vector(x_p2, y_p2)
-	distance = pos.dist(pos_p).m
-	distance2 = pos.dist(pos_p2).m
+	acc_net = Vector(0.0,0.0)
 
-	if (distance2 > distance):
+	for body in other_bodies:
+		x_body = interpolate(body["positions"].x)(t)
+		y_body = interpolate(body["positions"].y)(t)
 
-		if distance > rp:
-			acc = - (G * mp / (distance**2)) * (pos-pos_p).hat()
+		pos_body = Vector(x_body, y_body)
+		distance = pos.dist(pos_body).m
+
+		if distance > body["radius"]:
+			acc_net += - (G * body["mass"] / (distance**2)) * (pos-pos_body).hat()
 		else:
-			# hit planet surface
-			vx = 0
-			vy = 0
-			acc = Vector(0,0)
+			# hit sun surface
+			return  0, 0, 0, 0
 
-		return vx, vy, acc.x.m, acc.y.m
+	return vx, vy, acc_net.x.m, acc_net.y.m
 
-	else:
-		if distance2 > rp2:
-			acc = - (G * mp / (distance2**2)) * (pos-pos_p2).hat()
-		else:
-			# hit planet surface
-			vx = 0
-			vy = 0
-			acc = Vector(0,0)
+def generate_planet_orbit(x, y, vx, vy, mass, radius, sun, system):
+	"""
+	Returns a dictionary representing a planet and its trajectory:
 
-		return vx, vy, acc.x.m, acc.y.m
+	Planet: {
+		mass: num
+		radius: num
+		positions: TimeFrame
+			x: TimeSeries
+			y: TimeSeries
+			vx: TimeSeries
+			vy: TimeSeries
+	}
+	"""
 
-'''def rocket_slope_func2(rocket, t, system):
-#     x_r, y_r, vx_r, vy_r, x_p, y_p, vx_p, vy_p = rocket
-	x, y, vx, vy = rocket
-	unpack(system)
+	new_planet = State(x=x, y=y, vx=vx, vy=vy)
+	system.init = new_planet
+	system.other_bodies = [sun]
+
+	run_odeint(system, projectile_slope_func)
 	
-	x_p2 = interpolate(results_p2.x)(t)
-	y_p2 = interpolate(results_p2.y)(t)
-
-	pos = Vector(x, y)
-	pos_p2 = Vector(x_p2, y_p2)
-	distance = pos.dist(pos_p2).m
-
-	if distance > rp2:
-		acc = - (G * mp2 / (distance**2)) * (pos-pos_p2).hat()
-	else:
-		# hit planet surface
-		vx = 0
-		vy = 0
-		acc = Vector(0,0)
-
-	return vx, vy, acc.x.m, acc.y.m
-'''
-
-planet = State(
-	x=-1e10,
-	y=0,
-	vx=47e3,
-	vy=0)
-
-rocket = State(
-	x=-0.65e10, 
-	y=-1000e6, 
-	vx = 12e3,
-	vy = 12e3)
-
-planet2 = State(
-	x=-1e10,
-	y=3000e6,
-	vx=47e3,
-	vy=0)
+	return {
+		"mass": mass,
+		"radius": radius,
+		"positions": system.results,
+	}
 
 
-duration = 11e5
+duration = 11e9
 
 system = System(
-	init=planet,
+	init=None,
 	G=6.67408e-11, 
-	ts=linspace(0,duration,1000),
-	mr = 721.9,
-	mp = 1.9e27,
-	mp2 = 1.9e27,
-	rp = 70e6,
-	rp2 = 70e6)
+	ts=linspace(0,duration,1000)
+)
 
-run_odeint(system, planet_slope_func)
-results_p = system.results
+sun = {
+	"mass": 1.989e30,
+	"radius": 695700e3,
+	"positions": TimeFrame({"x": 0, "y": 0, "vx": 0, "vy": 0},[0,1])
+}
 
-system.init = planet2
-run_odeint(system, planet2_slope_func)
-results_p2 = system.results
+# Pluto
+pluto = generate_planet_orbit(
+	x = -4.44e12, 
+	y = 0, 
+	vx = 0, 
+	vy = -3756,
+	mass = 1.309e22,
+	radius = 1.187e6,
+	sun = sun,
+	system = system,
+)
 
-system.init = rocket
-system.results_p = results_p
-system.results_p2 = results_p2
-
-'''if (t > 0 and (((system.results_r.x - system.results_p.x)**2 + (system.results_r.y - system.results_p.y)**2)**(1/2) < 
-	((system.results_r.x - system.results_p2.x)**2 + (system.results_r.y - system.results_p2.y)**2)**(1/2)):
-
-	run_odeint(system, rocket_slope_func)
-	results_r = system.results
-
-else:
-	'''
-	
-run_odeint(system, rocket_slope_func)
-results_r = system.results
+bodies = [sun, pluto]
 
 
 ##########
@@ -152,36 +122,32 @@ if ('update' in sys.argv):
 # Position
 # ========
 
-x_p = results_p.x
-y_p = results_p.y
-x_r = results_r.x
-y_r = results_r.y
-x_p2 = results_p2.x
-y_p2 = results_p2.y
+radius_mult = 1e3
+colors = ['red', 'green', 'blue', 'yellow', 'orange', 'purple']
 
 # Setup figure
 fig_pos = plt.figure()
 fig_pos.set_dpi(100)
 fig_pos.set_size_inches(9,9)
 plt.title('Gravity Slingshot (position)')
-ax = plt.axes(xlim=(-1.2e10,1e10), ylim=(-5e9,5e9))
+ax = plt.axes(xlim=(-5e12,5e12), ylim=(-5e12,5e12))
 
 # Setup modes
 if (mode == 'update'):
-	rocket = plt.Circle((x_r[0],y_r[0]), system.rp, color='red')
-	planet = plt.Circle((x_p[0],y_p[0]), system.rp, color='green')
-	planet2 = plt.Circle((x_p2[0],y_p2[0]), system.rp2, color='blue')
-	line_r, = plt.plot([], [], 'red')
-	line_p, = plt.plot([], [], 'green')
-	line_p2 = plt.plot([], [], 'blue')
+	for idx, body in enumerate(bodies):
+		color = colors[idx]
+		positions = body['positions']
 
-	ax.add_artist(rocket)
-	ax.add_artist(planet)
-	ax.add_artist(planet2)
+		circle = plt.Circle((positions.x[0], positions.y[0]), body['radius'] * radius_mult, color=color)
+		line, = plt.plot([], [], color)
 
+		ax.add_artist(circle)
+		ax.add_artist(line)
+
+		body['artists'] = (circle, line)
 
 # Animation
-def generate_circle(t, x_r, y_r, x_p, y_p, x_p2, y_p2, ax, rocket, planet, planet2, line_r, line_p, line_p2):
+def animate(t, bodies, ax):
 	if (mode == 'update'):
 		def _generate(t, x_series, y_series, ax, circle, line):
 			x = interpolate(x_series)(t)
@@ -197,11 +163,12 @@ def generate_circle(t, x_r, y_r, x_p, y_p, x_p2, y_p2, ax, rocket, planet, plane
 
 			line.set_data(line_x, line_y)
 
-		_generate(t, x_r, y_r, ax, rocket, line_r)
-		_generate(t, x_p, y_p, ax, planet, line_p)
-		_generate(t, x_p2, y_p2, ax, planet2, line_p2)
+		for body in bodies:
+			positions = body['positions']
+			circle, line = body['artists']
+			_generate(t, positions.x, positions.y, ax, circle, line)
 
-		return [rocket, planet, planet2]
+		return [body['artists'][1] for body in bodies]
 
 	if (mode == 'trail'):
 		def _generate(t, x, y, ax, color):
@@ -211,49 +178,34 @@ def generate_circle(t, x_r, y_r, x_p, y_p, x_p2, y_p2, ax, rocket, planet, plane
 
 		_generate(t, x_r, y_r, ax, 'red')
 		_generate(t, x_p, y_p, ax, 'green')
-		_generate(t, x_p2, y_p2, ax, 'blue')
 
 		return []
 
 num_frames = 200 if (mode == 'update') else 50
 frames = linspace(0,duration, num_frames)
-generate_circle_fargs = (
-	x_r,
-	y_r,
-	x_p,
-	y_p,
-	x_p2,
-	y_p2,
-	ax,
-	rocket,
-	planet,
-	planet2,
-	line_r,
-	line_p,
-	line_p2
-)
-
-ani = animation.FuncAnimation(fig_pos, generate_circle, frames, fargs=generate_circle_fargs, interval=200, blit=True)
+ani = animation.FuncAnimation(fig_pos, animate, frames, fargs=(bodies, ax), interval=200, blit=True)
 
 # Save animation
 if (platform.system() == "Darwin"):
-	ani.save(f'build/slingshot_{mode}.gif', writer='imagemagick')
+	ani.save(f'build/3slingshot_{mode}.gif', writer='imagemagick')
 else:
-	ani.save(f'build/slingshot_{mode}.mp4', writer='ffmpeg')
+	ani.save(f'build/3slingshot_{mode}.mp4', writer='ffmpeg')
 
-fig_pos.savefig('build/position.png')
+fig_pos.savefig('build/3position.png')
 
 
 # Velocity
 # --------
  
 fig_v = plt.figure()
-
-vx_r = results_r.vx
-vy_r = results_r.vy
-v_r = np.sqrt(vx_r**2 + vy_r**2)
-
-plt.plot(v_r)
 plt.title('Speed')
 
-fig_v.savefig('build/velocity.png')
+for idx, body in enumerate(bodies):
+	color = colors[idx]
+	
+	vx = body['positions'].vx
+	vy = body['positions'].vy
+	speed = np.sqrt(vx**2 + vy**2)
+	plt.plot(speed, color=color)
+
+fig_v.savefig('build/speed.png')
