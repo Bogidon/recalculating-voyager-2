@@ -3,6 +3,7 @@ import matplotlib
 import matplotlib.animation as animation
 import platform
 import sys
+import pickle
 from pdb import set_trace
 
 ##############
@@ -94,19 +95,38 @@ sun = {
 	"positions": TimeFrame({"x": 0, "y": 0, "vx": 0, "vy": 0},[0,1])
 }
 
-# Pluto
-pluto = generate_planet_orbit(
-	x = -4.44e12, 
-	y = 0, 
-	vx = 0, 
-	vy = -3756,
-	mass = 1.309e22,
-	radius = 1.187e6,
-	sun = sun,
-	system = system,
-)
+def generate_planets(load=False):
+	filepath = 'build/planets.pickle'
 
-bodies = [sun, pluto]
+	if ('regen_planets' in sys.argv):
+		# Pluto
+		pluto = generate_planet_orbit(
+			x = -4.44e12, 
+			y = 0, 
+			vx = 0, 
+			vy = -3756,
+			mass = 1.309e22,
+			radius = 1.187e6,
+			sun = sun,
+			system = system,
+		)
+
+		planets = [pluto]
+
+		with open(filepath, 'wb') as file_handle:
+			pickle.dump(planets, file_handle, pickle.HIGHEST_PROTOCOL)
+
+		return planets
+
+	try:
+		with open(filepath, 'rb') as file_handle:
+			return pickle.load(file_handle)
+	except FileNotFoundError as error:
+		print('No planets data saved at build/planets.pickle. Rerun this script passing in `regen_planets` as an argument.')
+		exit()
+		
+
+bodies = [sun] + generate_planets()
 
 
 ##########
