@@ -96,17 +96,113 @@ sun = {
 
 # Pluto
 pluto = generate_planet_orbit(
-	x = -4.44e12, 
+	x = -4.436e12, 
 	y = 0, 
 	vx = 0, 
-	vy = -3756,
+	vy = -6.115e3,
 	mass = 1.309e22,
 	radius = 1.187e6,
 	sun = sun,
 	system = system,
 )
 
-bodies = [sun, pluto]
+#neptune
+neptune = generate_planet_orbit(
+	x = -4.46e12, 
+	y = 0, 
+	vx = 0, 
+	vy = -5.473e3,
+	mass = 1.024e26,
+	radius = 24622e3,
+	sun = sun,
+	system = system,
+)
+
+#uranus
+uranus = generate_planet_orbit(
+	x = -2.735e12, 
+	y = 0, 
+	vx = 0, 
+	vy = -7.112e3,
+	mass = 8.681e25,
+	radius = 25362e3,
+	sun = sun,
+	system = system,
+)
+
+#saturn
+saturn = generate_planet_orbit(
+	x = -1.349e12, 
+	y = 0, 
+	vx = 0, 
+	vy = -10.18e3,
+	mass = 5.683e26,
+	radius = 58232e3,
+	sun = sun,
+	system = system,
+)
+
+#jupiter
+jupiter = generate_planet_orbit(
+	x = -7.407e11, 
+	y = 0, 
+	vx = 0, 
+	vy = -13.71e3,
+	mass = 1.898e27,
+	radius = 69911e3,
+	sun = sun,
+	system = system,
+)
+
+#mars
+mars = generate_planet_orbit(
+	x = -2.067e11, 
+	y = 0, 
+	vx = 0, 
+	vy = -26.5e3,
+	mass = 6.39e23,
+	radius = 3390e3,
+	sun = sun,
+	system = system,
+)
+
+#earth
+earth = generate_planet_orbit(
+	x = -1.471e11, 
+	y = 0, 
+	vx = 0, 
+	vy = -30.29e3,
+	mass = 5.972e24,
+	radius = 6371e3,
+	sun = sun,
+	system = system,
+)
+
+#venus
+venus = generate_planet_orbit(
+	x = -1.075e11, 
+	y = 0, 
+	vx = 0, 
+	vy = -35.26e3,
+	mass = 4.867e24,
+	radius = 6052e3,
+	sun = sun,
+	system = system,
+)
+
+#mercury
+mercury = generate_planet_orbit(
+	x = -4.6e10, 
+	y = 0, 
+	vx = 0, 
+	vy = -58.97e3,
+	mass = 3.285e23,
+	radius = 2440e3,
+	sun = sun,
+	system = system,
+)
+
+bodies = [sun, pluto, neptune, uranus, saturn, jupiter, mars, earth, venus, mercury]
 
 
 ##########
@@ -130,7 +226,7 @@ fig_pos = plt.figure()
 fig_pos.set_dpi(100)
 fig_pos.set_size_inches(9,9)
 plt.title('Gravity Slingshot (position)')
-ax = plt.axes(xlim=(-5e12,5e12), ylim=(-5e12,5e12))
+ax = plt.axes(xlim=(-8e12,8e12), ylim=(-8e12,8e12))
 
 # Setup modes
 if (mode == 'update'):
