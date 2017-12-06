@@ -1,7 +1,6 @@
 from modsim import *
 import matplotlib
 import matplotlib.animation as animation
-#import matplotlib.collections.LineCollection as LineCollection
 import platform
 import sys
 from pdb import set_trace
@@ -12,7 +11,7 @@ def linear_slope_func(sun, t, system):
 	x, y, vx, vy = sun
 	unpack(system)
 
-	return 0, 0, 0, 0
+	return vx, vy, 0, 0
 	
 def projectile_slope_func(projectile, t, system):
 	"""
@@ -23,106 +22,68 @@ def projectile_slope_func(projectile, t, system):
 	Body: {
 		mass: Int
 		radius: Int
-		positions: TimeSeries
+		positions: TimeFrame
+			x: TimeSeries
+			y: TimeSeries
 	}
 	"""
 
-#     x_r, y_r, vx_r, vy_r, x_p, y_p, vx_p, vy_p = projectile
 	x, y, vx, vy = projectile
 	other_bodies = system.other_bodies
+	G = system.G
 	
 	pos = Vector(x, y)
-	acc_net = Vector(0,0)
+	acc_net = Vector(0.0,0.0)
 
 	for body in other_bodies:
-		x_body = interpolate(body.positions.x)(t)
-		y_body = interpolate(body.positions.y)(t)
+		x_body = interpolate(body["positions"].x)(t)
+		y_body = interpolate(body["positions"].y)(t)
 
 		pos_body = Vector(x_body, y_body)
-		distance = pos.dist(pos_body).mag
+		distance = pos.dist(pos_body).m
 
-		if distance > body.radius:
-			acc_net += - (G * body.mass / (distance**2)) * (pos-pos_body).hat()
+		if distance > body["radius"]:
+			acc_net += - (G * body["mass"] / (distance**2)) * (pos-pos_body).hat()
 		else:
 			# hit sun surface
 			return  0, 0, 0, 0
 
 	return vx, vy, acc_net.x.m, acc_net.y.m
 
-sun = State(
-	x=-0,
-	y=0,
-	vx=0,
-	vy=0)
-
-projectile = State(
-	x=-4.44e12, 
-	y=0, 
-	vx = 0,
-	vy = -3756)
-
-'''sun2 = State(
-	x=-1e10,
-	y=3000e6,
-	vx=47e3,
-	vy=0)'''
-
-def add_planet(xs, ys, vxs, vys, mass, radius, system):
-	new_planet = State(x=xs, y=ys, vx=vxs, vy=vys)
-	sun = State(x=0, y=0, vx=0, vy=0)
-	#new_system = System(init=sun, G=6.67408e-11, ts=linspace(0,duration,1000), mp = mps, ms = 1.989e30,
-	#rp = 695700e3)
-
+def generate_planet_orbit(x, y, vx, vy, mass, radius, sun, system):
+	new_planet = State(x=x, y=y, vx=vx, vy=vy)
 	system.init = new_planet
+	system.other_bodies = [sun]
 
 	run_odeint(system, projectile_slope_func)
-	results_p = system.results
-
-	return results_p
-
-	
-
-
-
-
-
-
+	return system.results
 
 
 duration = 11e9
 
 system = System(
-	init=sun,
+	init=None,
 	G=6.67408e-11, 
-	ts=linspace(0,duration,1000),
-	mr = 1.309e22,
-	mp = 1.989e30,
-	#mp2 = 1.9e27,
-	rp = 695700e3)
-	#rp2 = 70e6)
+	ts=linspace(0,duration,1000)
+)
 
-run_odeint(system, linear_slope_func)
-results_p = system.results
+sun = {
+	"mass": 1.989e30,
+	"radius": 695700e3,
+	"positions": TimeFrame({"x": 0, "y": 0},[0,1])
+}
 
-#system.init = sun2
-#run_odeint(system, sun2_slope_func)
-#results_p2 = system.results
-
-system.init = projectile
-system.results_p = results_p
-#system.results_p2 = results_p2
-
-'''if (t > 0 and (((system.results_r.x - system.results_p.x)**2 + (system.results_r.y - system.results_p.y)**2)**(1/2) < 
-	((system.results_r.x - system.results_p2.x)**2 + (system.results_r.y - system.results_p2.y)**2)**(1/2)):
-
-	run_odeint(system, projectile_slope_func)
-	results_r = system.results
-
-else:
-	'''
-
-run_odeint(system, projectile_slope_func)
-results_r = system.results
+# Pluto
+pluto = generate_planet_orbit(
+	x = -4.44e12, 
+	y = 0, 
+	vx = 0, 
+	vy = -3756,
+	mass = 1.309e22,
+	radius = 1.187e6,
+	sun = sun,
+	system = system,
+)
 
 
 ##########
@@ -138,12 +99,7 @@ if ('update' in sys.argv):
 # Position
 # ========
 
-x_p = results_p.x
-y_p = results_p.y
-x_r = results_r.x
-y_r = results_r.y
-#x_p2 = results_p2.x
-#y_p2 = results_p2.y
+radius = 1e10
 
 # Setup figure
 fig_pos = plt.figure()
@@ -154,20 +110,17 @@ ax = plt.axes(xlim=(-5e12,5e12), ylim=(-5e12,5e12))
 
 # Setup modes
 if (mode == 'update'):
-	projectile = plt.Circle((x_r[0],y_r[0]), system.rp * 100, color='red')
-	sun = plt.Circle((x_p[0],y_p[0]), system.rp * 100, color='green')
-	#sun2 = plt.Circle((x_p2[0],y_p2[0]), system.rp2, color='blue')
-	line_r, = plt.plot([], [], 'red')
+	projectile = plt.Circle((pluto.x[0],pluto.y[0]), radius, color='red')
+	sun = plt.Circle((0,0), radius, color='green')
+
 	line_p, = plt.plot([], [], 'green')
-	#line_p2 = plt.plot([], [], 'blue')
 
 	ax.add_artist(projectile)
 	ax.add_artist(sun)
-	#ax.add_artist(sun2)
 
 
 # Animation
-def generate_circle(t, x_r, y_r, x_p, y_p, ax, projectile, sun, line_r, line_p):
+def generate_circle(t, x, y, ax, projectile, line_p):
 	if (mode == 'update'):
 		def _generate(t, x_series, y_series, ax, circle, line):
 			x = interpolate(x_series)(t)
@@ -183,11 +136,9 @@ def generate_circle(t, x_r, y_r, x_p, y_p, ax, projectile, sun, line_r, line_p):
 
 			line.set_data(line_x, line_y)
 
-		_generate(t, x_r, y_r, ax, projectile, line_r)
-		_generate(t, x_p, y_p, ax, sun, line_p)
-		#_generate(t, x_p2, y_p2, ax, sun2, line_p2)
+		_generate(t, x, y, ax, projectile, line_p)
 
-		return [projectile, sun]
+		return [projectile]
 
 	if (mode == 'trail'):
 		def _generate(t, x, y, ax, color):
@@ -203,15 +154,11 @@ def generate_circle(t, x_r, y_r, x_p, y_p, ax, projectile, sun, line_r, line_p):
 num_frames = 200 if (mode == 'update') else 50
 frames = linspace(0,duration, num_frames)
 generate_circle_fargs = (
-	x_r,
-	y_r,
-	x_p,
-	y_p,
+	pluto.x,
+	pluto.y,
 	ax,
 	projectile,
-	sun,
-	line_r,
-	line_p,
+	line_p
 )
 
 ani = animation.FuncAnimation(fig_pos, generate_circle, frames, fargs=generate_circle_fargs, interval=200, blit=True)
@@ -230,8 +177,8 @@ fig_pos.savefig('build/3position.png')
  
 fig_v = plt.figure()
 
-vx_r = results_r.vx
-vy_r = results_r.vy
+vx_r = pluto.vx
+vy_r = pluto.vy
 v_r = np.sqrt(vx_r**2 + vy_r**2)
 
 plt.plot(v_r)
