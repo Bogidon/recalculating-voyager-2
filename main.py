@@ -3,6 +3,7 @@ import matplotlib
 import matplotlib.animation as animation
 import platform
 import sys
+import pickle
 from pdb import set_trace
 
 ##############
@@ -94,116 +95,151 @@ sun = {
 	"positions": TimeFrame({"x": 0, "y": 0, "vx": 0, "vy": 0},[0,1])
 }
 
-# Pluto
-pluto = generate_planet_orbit(
-	x = -4.436e12, 
-	y = 0, 
-	vx = 0, 
-	vy = -6.115e3,
-	mass = 1.309e22,
-	radius = 1.187e6,
-	sun = sun,
-	system = system,
-)
+def generate_planets(load=False):
+	filepath = 'build/planets.pickle'
 
-#neptune
-neptune = generate_planet_orbit(
-	x = -4.46e12, 
-	y = 0, 
-	vx = 0, 
-	vy = -5.473e3,
-	mass = 1.024e26,
-	radius = 24622e3,
-	sun = sun,
-	system = system,
-)
+	if ('regen_planets' in sys.argv):
+		# Pluto
+		pluto = generate_planet_orbit(
+			x = -4.436e12, 
+			y = 0, 
+			vx = 0, 
+			vy = -6.115e3,
+			mass = 1.309e22,
+			radius = 1.187e6,
+			sun = sun,
+			system = system,
+		)
 
-#uranus
-uranus = generate_planet_orbit(
-	x = -2.735e12, 
-	y = 0, 
-	vx = 0, 
-	vy = -7.112e3,
-	mass = 8.681e25,
-	radius = 25362e3,
-	sun = sun,
-	system = system,
-)
+		#neptune
+		neptune = generate_planet_orbit(
+			x = -4.46e12, 
+			y = 0, 
+			vx = 0, 
+			vy = -5.473e3,
+			mass = 1.024e26,
+			radius = 24622e3,
+			sun = sun,
+			system = system,
+		)
 
-#saturn
-saturn = generate_planet_orbit(
-	x = -1.349e12, 
-	y = 0, 
-	vx = 0, 
-	vy = -10.18e3,
-	mass = 5.683e26,
-	radius = 58232e3,
-	sun = sun,
-	system = system,
-)
+		#uranus
+		uranus = generate_planet_orbit(
+			x = -2.735e12, 
+			y = 0, 
+			vx = 0, 
+			vy = -7.112e3,
+			mass = 8.681e25,
+			radius = 25362e3,
+			sun = sun,
+			system = system,
+		)
 
-#jupiter
-jupiter = generate_planet_orbit(
-	x = -7.407e11, 
-	y = 0, 
-	vx = 0, 
-	vy = -13.71e3,
-	mass = 1.898e27,
-	radius = 69911e3,
-	sun = sun,
-	system = system,
-)
+		#saturn
+		saturn = generate_planet_orbit(
+			x = -1.349e12, 
+			y = 0, 
+			vx = 0, 
+			vy = -10.18e3,
+			mass = 5.683e26,
+			radius = 58232e3,
+			sun = sun,
+			system = system,
+		)
 
-#mars
-mars = generate_planet_orbit(
-	x = -2.067e11, 
-	y = 0, 
-	vx = 0, 
-	vy = -26.5e3,
-	mass = 6.39e23,
-	radius = 3390e3,
-	sun = sun,
-	system = system,
-)
+		#jupiter
+		jupiter = generate_planet_orbit(
+			x = -7.407e11, 
+			y = 0, 
+			vx = 0, 
+			vy = -13.71e3,
+			mass = 1.898e27,
+			radius = 69911e3,
+			sun = sun,
+			system = system,
+		)
 
-#earth
-earth = generate_planet_orbit(
-	x = -1.471e11, 
-	y = 0, 
-	vx = 0, 
-	vy = -30.29e3,
-	mass = 5.972e24,
-	radius = 6371e3,
-	sun = sun,
-	system = system,
-)
+		#mars
+		mars = generate_planet_orbit(
+			x = -2.067e11, 
+			y = 0, 
+			vx = 0, 
+			vy = -26.5e3,
+			mass = 6.39e23,
+			radius = 3390e3,
+			sun = sun,
+			system = system,
+		)
 
-#venus
-venus = generate_planet_orbit(
-	x = -1.075e11, 
-	y = 0, 
-	vx = 0, 
-	vy = -35.26e3,
-	mass = 4.867e24,
-	radius = 6052e3,
-	sun = sun,
-	system = system,
-)
+		#earth
+		earth = generate_planet_orbit(
+			x = -1.471e11, 
+			y = 0, 
+			vx = 0, 
+			vy = -30.29e3,
+			mass = 5.972e24,
+			radius = 6371e3,
+			sun = sun,
+			system = system,
+		)
 
-#mercury
-mercury = generate_planet_orbit(
-	x = -4.6e10, 
-	y = 0, 
-	vx = 0, 
-	vy = -58.97e3,
-	mass = 3.285e23,
-	radius = 2440e3,
-	sun = sun,
-	system = system,
-)
+		#venus
+		venus = generate_planet_orbit(
+			x = -1.075e11, 
+			y = 0, 
+			vx = 0, 
+			vy = -35.26e3,
+			mass = 4.867e24,
+			radius = 6052e3,
+			sun = sun,
+			system = system,
+		)
 
-bodies = [sun, pluto, neptune, uranus, saturn, jupiter, mars, earth, venus, mercury]
+		#mercury
+		mercury = generate_planet_orbit(
+			x = -4.6e10, 
+			y = 0, 
+			vx = 0, 
+			vy = -58.97e3,
+			mass = 3.285e23,
+			radius = 2440e3,
+			sun = sun,
+			system = system,
+		)
 
+		planets = [pluto, neptune, uranus, saturn, jupiter, mars, earth, venus, mercury]
+
+		with open(filepath, 'wb') as file_handle:
+			pickle.dump(planets, file_handle, pickle.HIGHEST_PROTOCOL)
+
+		return planets
+
+	try:
+		with open(filepath, 'rb') as file_handle:
+			return pickle.load(file_handle)
+	except FileNotFoundError as error:
+		print('No planets data saved at build/planets.pickle. Rerun this script passing in `regen_planets` as an argument.')
+		exit()
+		
+planets = generate_planets()
+
+voyager_init = State(x = -1.471e11, 
+			y = 0, 
+			vx = -12e3, 
+			vy = -12e3)
+
+system.init = voyager_init
+system.other_bodies = planets +[sun]
+
+run_odeint(system, projectile_slope_func)
+
+voyager = {
+	"mass": 721,
+	"radius":20,
+	"positions": system.results
+}
+
+bodies = [voyager]
 
 ##########
 # Graphing
@@ -218,8 +254,8 @@ if ('update' in sys.argv):
 # Position
 # ========
 
-radius_mult = 1e3
-colors = ['red', 'green', 'blue', 'yellow', 'orange', 'purple']
+radius_mult = 1
+colors = ['#009bdf','#e31d3c','#f47920','#ffc20e','#c0d028','#8ebe3f','#349e49','#26aaa5','#6bc1d3','#7b5aa6','#ed037c','#750324','#00677e']
 
 # Setup figure
 fig_pos = plt.figure()
@@ -240,7 +276,11 @@ if (mode == 'update'):
 		ax.add_artist(circle)
 		ax.add_artist(line)
 
+		body['color'] = color
 		body['artists'] = (circle, line)
+if (mode == 'trail'):
+	for idx, body in enumerate(bodies):
+		body['color'] = colors[idx]
 
 # Animation
 def animate(t, bodies, ax):
@@ -267,13 +307,14 @@ def animate(t, bodies, ax):
 		return [body['artists'][1] for body in bodies]
 
 	if (mode == 'trail'):
-		def _generate(t, x, y, ax, color):
+		def _generate(t, x, y, radius, ax, color):
 			x = interpolate(x)(t)
 			y = interpolate(y)(t)
-			ax.add_artist(plt.Circle((x,y), system.rp, color=color))
+			ax.add_artist(plt.Circle((x,y), radius, color=color))
 
-		_generate(t, x_r, y_r, ax, 'red')
-		_generate(t, x_p, y_p, ax, 'green')
+		for body in bodies:
+			positions = body['positions']
+			_generate(t, positions.x, positions.y, 1e11, ax, body['color'])
 
 		return []
 
@@ -283,11 +324,11 @@ ani = animation.FuncAnimation(fig_pos, animate, frames, fargs=(bodies, ax), inte
 
 # Save animation
 if (platform.system() == "Darwin"):
-	ani.save(f'build/3slingshot_{mode}.gif', writer='imagemagick')
+	ani.save(f'build/slingshot_{mode}.gif', writer='imagemagick')
 else:
-	ani.save(f'build/3slingshot_{mode}.mp4', writer='ffmpeg')
+	ani.save(f'build/slingshot_{mode}.mp4', writer='ffmpeg')
 
-fig_pos.savefig('build/3position.png')
+fig_pos.savefig('build/position.png')
 
 
 # Velocity
@@ -296,12 +337,10 @@ fig_pos.savefig('build/3position.png')
 fig_v = plt.figure()
 plt.title('Speed')
 
-for idx, body in enumerate(bodies):
-	color = colors[idx]
-	
+for body in bodies:
 	vx = body['positions'].vx
 	vy = body['positions'].vy
 	speed = np.sqrt(vx**2 + vy**2)
-	plt.plot(speed, color=color)
+	plt.plot(speed, color=body['color'])
 
 fig_v.savefig('build/speed.png')
