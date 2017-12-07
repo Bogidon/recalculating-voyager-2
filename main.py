@@ -4,6 +4,8 @@ import matplotlib.animation as animation
 import platform
 import sys
 import pickle
+from astropy.time import Time
+from astropy.coordinates import *
 from pdb import set_trace
 
 ##############
@@ -80,8 +82,11 @@ def generate_planet_orbit(x, y, vx, vy, mass, radius, sun, system):
 		"positions": system.results,
 	}
 
-
-duration = 11e9
+start_year = 1977
+end_year = 2018
+start_unix = Time(f'{start_year}-01-01').unix
+end_unix = Time(f'{end_year}-01-01').unix
+duration = end_unix - start_unix
 
 system = System(
 	init=None,
@@ -95,125 +100,77 @@ sun = {
 	"positions": TimeFrame({"x": 0, "y": 0, "vx": 0, "vy": 0},[0,1])
 }
 
-def generate_planets(load=False):
+def generate_planets(system, sun):
 	filepath = 'build/planets.pickle'
 
+	# Regen
 	if ('regen_planets' in sys.argv):
-		# Pluto
-		pluto = generate_planet_orbit(
-			x = -4.436e12, 
-			y = 0, 
-			vx = 0, 
-			vy = -6.115e3,
-			mass = 1.309e22,
-			radius = 1.187e6,
-			sun = sun,
-			system = system,
-		)
+		additional_info = {
+			"pluto" : {
+				"mass": 1.309e22,
+				"radius": 1.187e6,
+			}, 
+			"neptune" : {
+				"mass": 1.024e26,
+				"radius": 24622e3,
+			}, 
+			"uranus" : {
+				"mass": 8.681e25,
+				"radius": 25362e3,
+			}, 
+			"saturn" : {
+				"mass": 5.683e26,
+				"radius": 58232e3,
+			}, 
+			"jupiter" : {
+				"mass": 1.898e27,
+				"radius": 69911e3,
+			}, 
+			"mars" : {
+				"mass": 6.39e23,
+				"radius": 3390e3,
+			}, 
+			"earth" : {
+				"mass": 5.972e24,
+				"radius": 6371e3,
+			}, 
+			"venus" : {
+				"mass": 4.867e24,
+				"radius": 6052e3,
+			}, 
+			"mercury" : {
+				"mass": 3.285e23,
+				"radius": 2440e3,
+			}
+		}
 
-		#neptune
-		neptune = generate_planet_orbit(
-			x = -4.46e12, 
-			y = 0, 
-			vx = 0, 
-			vy = -5.473e3,
-			mass = 1.024e26,
-			radius = 24622e3,
-			sun = sun,
-			system = system,
-		)
+		# Get initial starting conditions
+		with solar_system_ephemeris.set('de432s'):
+			t = Time('1977-08-20')
+			planet_names = ['mercury', 'venus', 'earth', 'jupiter', 'saturn', 'uranus', 'neptune']
+			planets = []
 
-		#uranus
-		uranus = generate_planet_orbit(
-			x = -2.735e12, 
-			y = 0, 
-			vx = 0, 
-			vy = -7.112e3,
-			mass = 8.681e25,
-			radius = 25362e3,
-			sun = sun,
-			system = system,
-		)
+			for planet_name in planet_names:
+				helio_pos = get_body(planet_name, t).icrs.cartesian
+				icrs_vel = get_body_barycentric_posvel(planet_name, t)[1]
 
-		#saturn
-		saturn = generate_planet_orbit(
-			x = -1.349e12, 
-			y = 0, 
-			vx = 0, 
-			vy = -10.18e3,
-			mass = 5.683e26,
-			radius = 58232e3,
-			sun = sun,
-			system = system,
-		)
-
-		#jupiter
-		jupiter = generate_planet_orbit(
-			x = -7.407e11, 
-			y = 0, 
-			vx = 0, 
-			vy = -13.71e3,
-			mass = 1.898e27,
-			radius = 69911e3,
-			sun = sun,
-			system = system,
-		)
-
-		#mars
-		mars = generate_planet_orbit(
-			x = -2.067e11, 
-			y = 0, 
-			vx = 0, 
-			vy = -26.5e3,
-			mass = 6.39e23,
-			radius = 3390e3,
-			sun = sun,
-			system = system,
-		)
-
-		#earth
-		earth = generate_planet_orbit(
-			x = -1.471e11, 
-			y = 0, 
-			vx = 0, 
-			vy = -30.29e3,
-			mass = 5.972e24,
-			radius = 6371e3,
-			sun = sun,
-			system = system,
-		)
-
-		#venus
-		venus = generate_planet_orbit(
-			x = -1.075e11, 
-			y = 0, 
-			vx = 0, 
-			vy = -35.26e3,
-			mass = 4.867e24,
-			radius = 6052e3,
-			sun = sun,
-			system = system,
-		)
-
-		#mercury
-		mercury = generate_planet_orbit(
-			x = -4.6e10, 
-			y = 0, 
-			vx = 0, 
-			vy = -58.97e3,
-			mass = 3.285e23,
-			radius = 2440e3,
-			sun = sun,
-			system = system,
-		)
-
-		planets = [pluto, neptune, uranus, saturn, jupiter, mars, earth, venus, mercury]
+				planets.append(generate_planet_orbit(
+					x = helio_pos.x.si.to_value(), 
+					y = helio_pos.y.si.to_value(), 
+					vx = icrs_vel.x.si.to_value(), 
+					vy = icrs_vel.y.si.to_value(),
+					mass = additional_info[planet_name]["mass"],
+					radius = additional_info[planet_name]["radius"],
+					sun = sun,
+					system = system
+				))
 
 		with open(filepath, 'wb') as file_handle:
 			pickle.dump(planets, file_handle, pickle.HIGHEST_PROTOCOL)
 
 		return planets
 
+	# Don't regen, read from pickle
 	try:
 		with open(filepath, 'rb') as file_handle:
 			return pickle.load(file_handle)
@@ -221,7 +178,7 @@ def generate_planets(load=False):
 		print('No planets data saved at build/planets.pickle. Rerun this script passing in `regen_planets` as an argument.')
 		exit()
 		
-planets = generate_planets()
+planets = generate_planets(system, sun)
 
 voyager_init = State(x = -1.471e11, 
 			y = 0, 
@@ -231,15 +188,15 @@ voyager_init = State(x = -1.471e11,
 system.init = voyager_init
 system.other_bodies = planets +[sun]
 
-run_odeint(system, projectile_slope_func)
+# run_odeint(system, projectile_slope_func)
 
-voyager = {
-	"mass": 721,
-	"radius":20,
-	"positions": system.results
-}
+# voyager = {
+# 	"mass": 721,
+# 	"radius":20,
+# 	"positions": system.results
+# }
 
-bodies = [voyager]
+bodies = [sun] + planets
 
 ##########
 # Graphing
@@ -262,7 +219,8 @@ fig_pos = plt.figure()
 fig_pos.set_dpi(100)
 fig_pos.set_size_inches(9,9)
 plt.title('Gravity Slingshot (position)')
-ax = plt.axes(xlim=(-8e12,8e12), ylim=(-8e12,8e12))
+# ax = plt.axes(xlim=(-8e12,8e12), ylim=(-8e12,8e12))
+ax = plt.gca()
 
 # Setup modes
 if (mode == 'update'):
