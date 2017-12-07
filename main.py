@@ -177,37 +177,53 @@ def generate_planets(system, sun):
 		with open(filepath, 'rb') as file_handle:
 			return pickle.load(file_handle)
 	except FileNotFoundError as error:
-		print('No planets data saved at build/planets.pickle. Rerun this script passing in `regen_planets` as an argument.')
+		print(f'No planets data saved at {filepath}. Rerun this script passing in `regen_planets` as an argument.')
 		exit()
 
 def sweep_voyager(vx0, vy0, vxf, vyf, num, planets):
-	vx = linspace(vx0,vxf, num)
-	vy = linspace(vy0,vyf, num)
+	filepath = 'build/voyager.pickle'
+
+	# Regen
+	if ('regen_voyager' in sys.argv):
+		vx = linspace(vx0,vxf, num)
+		vy = linspace(vy0,vyf, num)
+		
+		earth = get_body('earth', Time('1977-08-20')).icrs.cartesian
+		runs = []
+
+		for i in range(num):
+			for t in range(num):
+				print(f'Computing voyager trajectory #{i}-{t}: vx: {vx[i]} vy: {vy[t]}')
+				voyager_init = State(
+					x = earth.x.to_value('m'), 
+					y = earth.y.to_value('m') + 6371e3,
+					vx = vx[i], 
+					vy = vy[t])
+
+				system.init = voyager_init
+				system.other_bodies = planets +[sun]
+				
+				run_odeint(system, projectile_slope_func, mxstep=600)
+				runs.append({
+					"mass": 721,
+					"radius":20,
+					"name": "voyager",
+					"positions": system.results
+				})
+
+		with open(filepath, 'wb') as file_handle:
+			pickle.dump(runs, file_handle, pickle.HIGHEST_PROTOCOL)
+
+		return runs
 	
-	earth = get_body('earth', Time('1977-08-20')).icrs.cartesian
-	runs = []
+	# Don't regen, read from pickle
+	try:
+		with open(filepath, 'rb') as file_handle:
+			return pickle.load(file_handle)
+	except FileNotFoundError as error:
+		print(f'No voyager data saved at {filepath}. Rerun this script passing in `regen_voyager` as an argument.')
+		exit()
 
-	for i in range(num):
-		for t in range(num):
-			print(f'Computing voyager trajectory #{i}-{t}: vx: {vx[i]} vy: {vy[t]}')
-			voyager_init = State(
-				x = earth.x.to_value('m'), 
-				y = earth.y.to_value('m') + 6371e3,
-				vx = vx[i], 
-				vy = vy[t])
-
-			system.init = voyager_init
-			system.other_bodies = planets +[sun]
-			
-			run_odeint(system, projectile_slope_func, mxstep=600)
-			runs.append({
-				"mass": 721,
-				"radius":20,
-				"name": "voyager",
-				"positions": system.results
-			})
-
-	return runs
 
 start_year = 1977
 end_year = 2018
@@ -236,7 +252,7 @@ sun = {
 		
 planets = generate_planets(system, sun)
 
-runs = sweep_voyager(vx0=16.526995e3, vy0=41.37781e3, vxf=16.53e3, vyf=41.38e3, num=4, planets=planets)
+runs = sweep_voyager(vx0=16.526995e3, vy0=41.37781e3, vxf=16.53e3, vyf=41.378e3, num=4, planets=planets)
 print('Done computing voyager trajectories')
 
 bodies = runs + planets 
@@ -337,13 +353,17 @@ fig_pos.savefig('build/position.png')
 # Velocity
 # --------
  
-fig_v = plt.figure()
-plt.title('Speed')
+def plot_velocity(bodies, name):
+	fig_v = plt.figure()
+	plt.title(f'Speed ({name})')
 
-for body in bodies:
-	vx = body['positions'].vx
-	vy = body['positions'].vy
-	speed = np.sqrt(vx**2 + vy**2)
-	plt.plot(speed, color=body['color'])
+	for body in bodies:
+		vx = body['positions'].vx
+		vy = body['positions'].vy
+		speed = np.sqrt(vx**2 + vy**2)
+		plt.plot(speed, color=body['color'])
 
-fig_v.savefig('build/speed.png')
+	fig_v.savefig(f'build/speed_{name}.png')
+
+plot_velocity([body for body in bodies if body['name'] != 'voyager'], 'planets')
+plot_velocity([body for body in bodies if body['name'] == 'voyager'], 'voyager')
