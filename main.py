@@ -180,36 +180,36 @@ def generate_planets(system, sun):
 		print(f'No planets data saved at {filepath}. Rerun this script passing in `regen_planets` as an argument.')
 		exit()
 
-def sweep_voyager(vx0, vy0, vxf, vyf, num, planets):
+def sweep_voyager(vmag, vy0, vyf, num, planets):
 	filepath = 'build/voyager.pickle'
 
 	# Regen
 	if ('regen_voyager' in sys.argv):
-		vx = linspace(vx0,vxf, num)
 		vy = linspace(vy0,vyf, num)
 		
 		earth = get_body('earth', Time('1977-08-20')).icrs.cartesian
 		runs = []
 
 		for i in range(num):
-			for t in range(num):
-				print(f'Computing voyager trajectory #{i}-{t}: vx: {vx[i]} vy: {vy[t]}')
-				voyager_init = State(
-					x = earth.x.to_value('m'), 
-					y = earth.y.to_value('m') + 6371e3,
-					vx = vx[i], 
-					vy = vy[t])
+			vx = np.sqrt(vmag**2 - vy[i]**2)
 
-				system.init = voyager_init
-				system.other_bodies = planets +[sun]
-				
-				run_odeint(system, projectile_slope_func, mxstep=600)
-				runs.append({
-					"mass": 721,
-					"radius":20,
-					"name": "voyager",
-					"positions": system.results
-				})
+			print(f'Computing voyager trajectory #{i}: vx: {vx} vy: {vy[i]}')
+			voyager_init = State(
+				x = earth.x.to_value('m'), 
+				y = earth.y.to_value('m') + 6371e3,
+				vx = vx,
+				vy = vy[i])
+
+			system.init = voyager_init
+			system.other_bodies = planets +[sun]
+			
+			run_odeint(system, projectile_slope_func)
+			runs.append({
+				"mass": 721,
+				"radius":20,
+				"name": "voyager",
+				"positions": system.results
+			})
 
 		with open(filepath, 'wb') as file_handle:
 			pickle.dump(runs, file_handle, pickle.HIGHEST_PROTOCOL)
@@ -252,7 +252,7 @@ sun = {
 		
 planets = generate_planets(system, sun)
 
-runs = sweep_voyager(vx0=16.526995e3, vy0=41.37781e3, vxf=16.53e3, vyf=41.378e3, num=4, planets=planets)
+runs = sweep_voyager(vmag=44556.31534, vy0=40.5e3, vyf=42e3, num=1500, planets=planets)
 print('Done computing voyager trajectories')
 
 bodies = runs + planets 
@@ -274,7 +274,7 @@ def radius_transform(radius):
 	return np.power(radius, 1/4) * 8e8
 
 limit_distance = 5e12
-colors = ['#009bdf','#e31d3c','#f47920','#ffc20e','#c0d028','#8ebe3f','#349e49','#26aaa5','#6bc1d3','#7b5aa6','#ed037c','#750324','#00677e'] * 10
+colors = ['#009bdf','#e31d3c','#f47920','#ffc20e','#c0d028','#8ebe3f','#349e49','#26aaa5','#6bc1d3','#7b5aa6','#ed037c','#750324','#00677e'] * 1000
 
 # Setup figure
 fig_pos = plt.figure()
