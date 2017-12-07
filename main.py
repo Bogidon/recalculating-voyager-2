@@ -199,7 +199,7 @@ system.other_bodies = planets +[sun]
 # 	"positions": system.results
 # }
 
-bodies = [sun] + planets
+bodies = [] + planets 
 
 ##########
 # Graphing
@@ -214,14 +214,16 @@ if ('update' in sys.argv):
 # Position
 # ========
 
-limit_distance = 5e11
-radius_mult = 1
+def radius_transform(radius):
+	return np.power(radius, 1/4) * 8e8
+
+limit_distance = 5e12
 colors = ['#009bdf','#e31d3c','#f47920','#ffc20e','#c0d028','#8ebe3f','#349e49','#26aaa5','#6bc1d3','#7b5aa6','#ed037c','#750324','#00677e']
 
 # Setup figure
 fig_pos = plt.figure()
 fig_pos.set_dpi(100)
-fig_pos.set_size_inches(9,9)
+fig_pos.set_size_inches(20,20)
 plt.title('Gravity Slingshot (position)')
 ax = plt.axes(xlim=(-limit_distance,limit_distance), ylim=(-limit_distance,limit_distance))
 
@@ -231,7 +233,7 @@ if (mode == 'update'):
 		color = colors[idx]
 		positions = body['positions']
 
-		circle = plt.Circle((positions.x[0], positions.y[0]), body['radius'] * radius_mult, color=color)
+		circle = plt.Circle((positions.x[0], positions.y[0]), radius_transform(body['radius']), color=color)
 		line, = plt.plot([], [], color)
 
 		ax.add_artist(circle)
