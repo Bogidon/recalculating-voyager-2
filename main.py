@@ -99,31 +99,6 @@ def generate_planet_orbit(x, y, vx, vy, mass, radius, planet_name, sun, system):
 		"positions": system.results,
 	}
 
-start_year = 1977
-end_year = 2018
-start_unix = Time(f'{start_year}-01-01').unix
-end_unix = Time(f'{end_year}-01-01').unix
-duration = end_unix - start_unix
-
-system = System(
-	init=None,
-	G=np.float64(6.67408e-11), 
-	ts=linspace(0,duration,10000),
-	crashed=False
-)
-
-sun_frame = TimeFrame({"x": 0, "y": 0, "vx": 0, "vy": 0},[0,1])
-sun = {
-	"mass": 1.989e30,
-	"radius": 695700e3,
-	"name": 'sun',
-	"position_interpolations": {
-		"x": interpolate(sun_frame.x),
-		"y": interpolate(sun_frame.y)
-	},
-	"positions": sun_frame,
-}
-
 def generate_planets(system, sun):
 	filepath = 'build/planets.pickle'
 
@@ -204,30 +179,67 @@ def generate_planets(system, sun):
 	except FileNotFoundError as error:
 		print('No planets data saved at build/planets.pickle. Rerun this script passing in `regen_planets` as an argument.')
 		exit()
+
+def sweep_voyager(vx0, vy0, vxf, vyf, num, planets):
+	vx = linspace(vx0,vxf, num)
+	vy = linspace(vy0,vyf, num)
+	
+	earth = get_body('earth', Time('1977-08-20')).icrs.cartesian
+	runs = []
+
+	for i in range(num):
+		for t in range(num):
+			print(f'Computing voyager trajectory #{i}-{t}: vx: {vx[i]} vy: {vy[t]}')
+			voyager_init = State(
+				x = earth.x.to_value('m'), 
+				y = earth.y.to_value('m') + 6371e3,
+				vx = vx[i], 
+				vy = vy[t])
+
+			system.init = voyager_init
+			system.other_bodies = planets +[sun]
+			
+			run_odeint(system, projectile_slope_func, mxstep=600)
+			runs.append({
+				"mass": 721,
+				"radius":20,
+				"name": "voyager",
+				"positions": system.results
+			})
+
+	return runs
+
+start_year = 1977
+end_year = 2018
+start_unix = Time(f'{start_year}-01-01').unix
+end_unix = Time(f'{end_year}-01-01').unix
+duration = end_unix - start_unix
+
+system = System(
+	init=None,
+	G=np.float64(6.67408e-11), 
+	ts=linspace(0,duration,10000),
+	crashed=False
+)
+
+sun_frame = TimeFrame({"x": 0, "y": 0, "vx": 0, "vy": 0},[0,1])
+sun = {
+	"mass": 1.989e30,
+	"radius": 695700e3,
+	"name": 'sun',
+	"position_interpolations": {
+		"x": interpolate(sun_frame.x),
+		"y": interpolate(sun_frame.y)
+	},
+	"positions": sun_frame,
+}
 		
 planets = generate_planets(system, sun)
-earth = get_body('earth', Time('1977-08-20')).icrs.cartesian
 
-voyager_init = State(
-			x = earth.x.to_value('m'), 
-			y = earth.y.to_value('m') + 6371e3,
-			vx = 16.526997e3, 
-			vy = 41.377817e3)
+runs = sweep_voyager(vx0=16.526995e3, vy0=41.37781e3, vxf=16.53e3, vyf=41.38e3, num=4, planets=planets)
+print('Done computing voyager trajectories')
 
-system.init = voyager_init
-system.other_bodies = planets +[sun]
-
-run_odeint(system, projectile_slope_func, mxstep=600)
-print('Done computing voyager trajectory')
-
-voyager = {
-	"mass": 721,
-	"radius":20,
-	"name": "voyager",
-	"positions": system.results
-}
-
-bodies = [voyager] + planets 
+bodies = runs + planets 
 
 ##########
 # Graphing
@@ -246,7 +258,7 @@ def radius_transform(radius):
 	return np.power(radius, 1/4) * 8e8
 
 limit_distance = 5e12
-colors = ['#009bdf','#e31d3c','#f47920','#ffc20e','#c0d028','#8ebe3f','#349e49','#26aaa5','#6bc1d3','#7b5aa6','#ed037c','#750324','#00677e']
+colors = ['#009bdf','#e31d3c','#f47920','#ffc20e','#c0d028','#8ebe3f','#349e49','#26aaa5','#6bc1d3','#7b5aa6','#ed037c','#750324','#00677e'] * 10
 
 # Setup figure
 fig_pos = plt.figure()
