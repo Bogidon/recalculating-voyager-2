@@ -3,7 +3,7 @@ import matplotlib
 import matplotlib.animation as animation
 import platform
 import sys
-import pickle
+import dill as pickle
 from astropy.time import Time
 from astropy.coordinates import *
 from pdb import set_trace
@@ -27,6 +27,9 @@ def projectile_slope_func(projectile, t, system):
 	Body: {
 		mass: num
 		radius: num
+		position_interpolations: dict
+			x: function
+			y: function
 		positions: TimeFrame
 			x: TimeSeries
 			y: TimeSeries
@@ -41,8 +44,8 @@ def projectile_slope_func(projectile, t, system):
 	acc_net = Vector(0.0,0.0)
 
 	for body in other_bodies:
-		x_body = interpolate(body["positions"].x)(t)
-		y_body = interpolate(body["positions"].y)(t)
+		x_body = body["position_interpolations"]['x'](t)
+		y_body = body["position_interpolations"]['y'](t)
 
 		pos_body = Vector(x_body, y_body)
 		distance = pos.dist(pos_body).m
@@ -50,7 +53,7 @@ def projectile_slope_func(projectile, t, system):
 		if distance > body["radius"]:
 			acc_net += - (G * body["mass"] / (distance**2)) * (pos-pos_body).hat()
 		else:
-			# hit sun surface
+			# hit body surface
 			return  0, 0, 0, 0
 
 	return vx, vy, acc_net.x.m, acc_net.y.m
@@ -79,6 +82,11 @@ def generate_planet_orbit(x, y, vx, vy, mass, radius, planet_name, sun, system):
 	return {
 		"mass": mass,
 		"radius": radius,
+		"name": planet_name,
+		"position_interpolations": {
+			"x": interpolate(system.results.x),
+			"y": interpolate(system.results.y),
+		},
 		"positions": system.results,
 	}
 
@@ -90,14 +98,20 @@ duration = end_unix - start_unix
 
 system = System(
 	init=None,
-	G=6.67408e-11, 
-	ts=linspace(0,duration,1000)
+	G=np.float64(6.67408e-11), 
+	ts=linspace(0,duration,10000)
 )
 
+sun_frame = TimeFrame({"x": 0, "y": 0, "vx": 0, "vy": 0},[0,1])
 sun = {
 	"mass": 1.989e30,
 	"radius": 695700e3,
-	"positions": TimeFrame({"x": 0, "y": 0, "vx": 0, "vy": 0},[0,1])
+	"name": 'sun',
+	"position_interpolations": {
+		"x": interpolate(sun_frame.x),
+		"y": interpolate(sun_frame.y)
+	},
+	"positions": sun_frame,
 }
 
 def generate_planets(system, sun):
@@ -107,40 +121,40 @@ def generate_planets(system, sun):
 	if ('regen_planets' in sys.argv):
 		additional_info = {
 			"pluto" : {
-				"mass": 1.309e22,
-				"radius": 1.187e6,
+				"mass": np.float64(1.309e22),
+				"radius": np.float64(1.187e6),
 			}, 
 			"neptune" : {
-				"mass": 1.024e26,
-				"radius": 24622e3,
+				"mass": np.float64(1.024e26),
+				"radius": np.float64(24622e3),
 			}, 
 			"uranus" : {
-				"mass": 8.681e25,
-				"radius": 25362e3,
+				"mass": np.float64(8.681e25),
+				"radius": np.float64(25362e3),
 			}, 
 			"saturn" : {
-				"mass": 5.683e26,
-				"radius": 58232e3,
+				"mass": np.float64(5.683e26),
+				"radius": np.float64(58232e3),
 			}, 
 			"jupiter" : {
-				"mass": 1.898e27,
-				"radius": 69911e3,
+				"mass": np.float64(1.898e27),
+				"radius": np.float64(69911e3),
 			}, 
 			"mars" : {
-				"mass": 6.39e23,
-				"radius": 3390e3,
+				"mass": np.float64(6.39e23),
+				"radius": np.float64(3390e3),
 			}, 
 			"earth" : {
-				"mass": 5.972e24,
-				"radius": 6371e3,
+				"mass": np.float64(5.972e24),
+				"radius": np.float64(6371e3),
 			}, 
 			"venus" : {
-				"mass": 4.867e24,
-				"radius": 6052e3,
+				"mass": np.float64(4.867e24),
+				"radius": np.float64(6052e3),
 			}, 
 			"mercury" : {
-				"mass": 3.285e23,
-				"radius": 2440e3,
+				"mass": np.float64(3.285e23),
+				"radius": np.float64(2440e3),
 			}
 		}
 
@@ -198,10 +212,10 @@ run_odeint(system, projectile_slope_func, mxstep=500)
 voyager = {
 	"mass": 721,
 	"radius":20,
+	"name": "voyager",
 	"positions": system.results
 }
 
-set_trace()
 bodies = [voyager] + planets 
 
 ##########
