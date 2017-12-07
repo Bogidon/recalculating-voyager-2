@@ -55,7 +55,7 @@ def projectile_slope_func(projectile, t, system):
 
 	return vx, vy, acc_net.x.m, acc_net.y.m
 
-def generate_planet_orbit(x, y, vx, vy, mass, radius, sun, system):
+def generate_planet_orbit(x, y, vx, vy, mass, radius, planet_name, sun, system):
 	"""
 	Returns a dictionary representing a planet and its trajectory:
 
@@ -154,6 +154,8 @@ def generate_planets(system, sun):
 				helio_pos = get_body(planet_name, t).icrs.cartesian
 				icrs_vel = get_body_barycentric_posvel(planet_name, t)[1]
 
+				print(planet_name)
+
 				planets.append(generate_planet_orbit(
 					x = helio_pos.x.si.to_value(), 
 					y = helio_pos.y.si.to_value(), 
@@ -161,6 +163,7 @@ def generate_planets(system, sun):
 					vy = icrs_vel.y.si.to_value(),
 					mass = additional_info[planet_name]["mass"],
 					radius = additional_info[planet_name]["radius"],
+					planet_name = planet_name,
 					sun = sun,
 					system = system
 				))
@@ -211,6 +214,7 @@ if ('update' in sys.argv):
 # Position
 # ========
 
+limit_distance = 5e11
 radius_mult = 1
 colors = ['#009bdf','#e31d3c','#f47920','#ffc20e','#c0d028','#8ebe3f','#349e49','#26aaa5','#6bc1d3','#7b5aa6','#ed037c','#750324','#00677e']
 
@@ -219,8 +223,7 @@ fig_pos = plt.figure()
 fig_pos.set_dpi(100)
 fig_pos.set_size_inches(9,9)
 plt.title('Gravity Slingshot (position)')
-# ax = plt.axes(xlim=(-8e12,8e12), ylim=(-8e12,8e12))
-ax = plt.gca()
+ax = plt.axes(xlim=(-limit_distance,limit_distance), ylim=(-limit_distance,limit_distance))
 
 # Setup modes
 if (mode == 'update'):
@@ -276,7 +279,7 @@ def animate(t, bodies, ax):
 
 		return []
 
-num_frames = 200 if (mode == 'update') else 50
+num_frames = 200 if (mode == 'update') else 100
 frames = linspace(0,duration, num_frames)
 ani = animation.FuncAnimation(fig_pos, animate, frames, fargs=(bodies, ax), interval=200, blit=True)
 
