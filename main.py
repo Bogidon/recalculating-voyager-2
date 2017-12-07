@@ -12,6 +12,9 @@ from pdb import set_trace
 # Calculations
 ##############
 
+class HitBodyError(Exception):
+	pass
+
 def linear_slope_func(sun, t, system):
 	x, y, vx, vy = sun
 	unpack(system)
@@ -36,6 +39,9 @@ def projectile_slope_func(projectile, t, system):
 	}
 	"""
 
+	# if (t > 79145612):
+		# set_trace()
+
 	x, y, vx, vy = projectile
 	other_bodies = system.other_bodies
 	G = system.G
@@ -50,11 +56,14 @@ def projectile_slope_func(projectile, t, system):
 		pos_body = Vector(x_body, y_body)
 		distance = pos.dist(pos_body).m
 
-		if distance > body["radius"]:
+		if distance > body["radius"] and not system.crashed:
 			acc_net += - (G * body["mass"] / (distance**2)) * (pos-pos_body).hat()
 		else:
 			# hit body surface
-			return  0, 0, 0, 0
+			system.crashed = True
+			vx = 0.0001
+			vy = 0.0001
+			acc_net = Vector(0.0001,0.0001)
 
 	return vx, vy, acc_net.x.m, acc_net.y.m
 
@@ -99,7 +108,8 @@ duration = end_unix - start_unix
 system = System(
 	init=None,
 	G=np.float64(6.67408e-11), 
-	ts=linspace(0,duration,10000)
+	ts=linspace(0,duration,10000),
+	crashed=False
 )
 
 sun_frame = TimeFrame({"x": 0, "y": 0, "vx": 0, "vy": 0},[0,1])
@@ -201,13 +211,14 @@ earth = get_body('earth', Time('1977-08-20')).icrs.cartesian
 voyager_init = State(
 			x = earth.x.to_value('m'), 
 			y = earth.y.to_value('m') + 6371e3,
-			vx = 0, 
-			vy = 38.5e3)
+			vx = 16.526997e3, 
+			vy = 41.377817e3)
 
 system.init = voyager_init
 system.other_bodies = planets +[sun]
 
-run_odeint(system, projectile_slope_func, mxstep=500)
+run_odeint(system, projectile_slope_func, mxstep=600)
+print('Done computing voyager trajectory')
 
 voyager = {
 	"mass": 721,
