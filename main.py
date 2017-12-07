@@ -182,24 +182,27 @@ def generate_planets(system, sun):
 		exit()
 		
 planets = generate_planets(system, sun)
+earth = get_body('earth', Time('1977-08-20')).icrs.cartesian
 
-voyager_init = State(x = -1.471e11, 
-			y = 0, 
-			vx = -12e3, 
-			vy = -12e3)
+voyager_init = State(
+			x = earth.x.to_value('m'), 
+			y = earth.y.to_value('m') + 6371e3,
+			vx = 0, 
+			vy = 38.5e3)
 
 system.init = voyager_init
 system.other_bodies = planets +[sun]
 
-# run_odeint(system, projectile_slope_func)
+run_odeint(system, projectile_slope_func, mxstep=500)
 
-# voyager = {
-# 	"mass": 721,
-# 	"radius":20,
-# 	"positions": system.results
-# }
+voyager = {
+	"mass": 721,
+	"radius":20,
+	"positions": system.results
+}
 
-bodies = [] + planets 
+set_trace()
+bodies = [voyager] + planets 
 
 ##########
 # Graphing
