@@ -22,13 +22,13 @@ $ python main.py trail   # creates circlse for each time step, leaving a trail
 
 ## Examples
 
-Varying launch angle:
+### Varying launch angle:
 ![](https://imgur.com/download/bZvb54B)
 
-Speed of voyager over time:
+### Speed of voyager over time:
 ![](https://imgur.com/download/LAr9jzi)
 
-Linear speeds of planets:
+### Linear speeds of planets:
 ![](https://imgur.com/download/9KnSxn8)
 
 ## Presentation
