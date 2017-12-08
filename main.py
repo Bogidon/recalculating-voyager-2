@@ -12,13 +12,9 @@ from pdb import set_trace
 # Calculations
 ##############
 
-class HitBodyError(Exception):
-	pass
-
 def linear_slope_func(sun, t, system):
 	x, y, vx, vy = sun
 	unpack(system)
-
 	return vx, vy, 0, 0
 	
 def projectile_slope_func(projectile, t, system):
@@ -146,7 +142,7 @@ def generate_planets(system, sun):
 		# Get initial starting conditions
 		with solar_system_ephemeris.set('de432s'):
 			t = Time('1977-08-20')
-			planet_names = ['mercury', 'venus', 'earth', 'jupiter', 'saturn', 'uranus', 'neptune']
+			planet_names = ['mercury', 'venus', 'earth', 'mars', 'jupiter', 'saturn', 'uranus', 'neptune']
 			planets = []
 
 			for planet_name in planet_names:
@@ -223,7 +219,6 @@ def sweep_voyager(vmag, vy0, vyf, num, planets):
 	except FileNotFoundError as error:
 		print(f'No voyager data saved at {filepath}. Rerun this script passing in `regen_voyager` as an argument.')
 		exit()
-
 
 start_year = 1977
 end_year = 2018
@@ -311,11 +306,6 @@ def animate(t, bodies, ax):
 
 			line_x = np.append(line.get_xdata(), x)
 			line_y = np.append(line.get_ydata(), y)
-
-			#attempt to vary line width with velocity
-			#lwidths = 1 + results_r.vx[:-1]
-			#lc = LineCollection(segments, linewidths=lwidths,color='blue')
-
 			line.set_data(line_x, line_y)
 
 		for body in bodies:
