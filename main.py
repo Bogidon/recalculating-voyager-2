@@ -35,9 +35,6 @@ def projectile_slope_func(projectile, t, system):
 	}
 	"""
 
-	# if (t > 79145612):
-		# set_trace()
-
 	x, y, vx, vy = projectile
 	other_bodies = system.other_bodies
 	G = system.G
@@ -204,12 +201,17 @@ def sweep_voyager(vmag, vy0, vyf, num, planets):
 				"mass": 721,
 				"radius":20,
 				"name": "voyager",
+				"position_interpolations": {
+					"x": interpolate(system.results.x),
+					"y": interpolate(system.results.y),
+				},
 				"positions": system.results
 			})
 
 		with open(filepath, 'wb') as file_handle:
 			pickle.dump(runs, file_handle, pickle.HIGHEST_PROTOCOL)
 
+		print('Done computing voyager trajectories')
 		return runs
 	
 	# Don't regen, read from pickle
@@ -247,8 +249,7 @@ sun = {
 		
 planets = generate_planets(system, sun)
 
-runs = sweep_voyager(vmag=44556.31534, vy0=40.5e3, vyf=42e3, num=1500, planets=planets)
-print('Done computing voyager trajectories')
+runs = sweep_voyager(vmag=44556.31534, vy0=41.0e3, vyf=41.4e3, num=10, planets=planets)
 
 bodies = runs + planets 
 
@@ -299,31 +300,26 @@ if (mode == 'trail'):
 # Animation
 def animate(t, bodies, ax):
 	if (mode == 'update'):
-		def _generate(t, x_series, y_series, ax, circle, line):
-			x = interpolate(x_series)(t)
-			y = interpolate(y_series)(t)
+		def _generate(x, y, ax, circle, line):
 			circle.center = (x, y)
-
 			line_x = np.append(line.get_xdata(), x)
 			line_y = np.append(line.get_ydata(), y)
 			line.set_data(line_x, line_y)
 
 		for body in bodies:
-			positions = body['positions']
+			interp = body['position_interpolations']
 			circle, line = body['artists']
-			_generate(t, positions.x, positions.y, ax, circle, line)
+			_generate(interp['x'](t), interp['y'](t), ax, circle, line)
 
 		return [body['artists'][1] for body in bodies]
 
 	if (mode == 'trail'):
-		def _generate(t, x, y, radius, ax, color):
-			x = interpolate(x)(t)
-			y = interpolate(y)(t)
+		def _generate(x, y, radius, ax, color):
 			ax.add_artist(plt.Circle((x,y), radius, color=color))
 
 		for body in bodies:
-			positions = body['positions']
-			_generate(t, positions.x, positions.y, 1e11, ax, body['color'])
+			interp = body['position_interpolations']
+			_generate(interp['x'](t), interp['y'](t), 1e11, ax, body['color'])
 
 		return []
 
@@ -345,6 +341,7 @@ fig_pos.savefig('build/position.png')
  
 def plot_velocity(bodies, name):
 	fig_v = plt.figure()
+	fig_v.set_size_inches(20,20)
 	plt.title(f'Speed ({name})')
 
 	for body in bodies:
